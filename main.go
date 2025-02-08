@@ -43,77 +43,33 @@ type AppConfig struct {
 	Region         string
 }
 
-// newConfig parses flags and performs initial validation.
-func newConfig() *AppConfig {
-	inputFilePath := flag.String("f", "", "Path to input m4a audio file")
-	outputFilePath := flag.String("o", "", "Path to output text file")
-	bucketName := flag.String("b", "", "S3 bucket name")
-	region := flag.String("r", "us-east-1", "AWS region (default: us-east-1)")
-	flag.Parse()
-
-	if *inputFilePath == "" || *outputFilePath == "" || *bucketName == "" {
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	// Input file must be an m4a file.
-	if !strings.HasSuffix(strings.ToLower(*inputFilePath), ".m4a") {
-		log.Fatalf("Input file must be an m4a file")
-	}
-
-	// Validate bucket name according to AWS naming rules (simple regex).
-	if !isValidBucketName(*bucketName) {
-		log.Fatalf("Invalid bucket name: %s", *bucketName)
-	}
-
-	return &AppConfig{
-		InputFilePath:  *inputFilePath,
-		OutputFilePath: *outputFilePath,
-		BucketName:     *bucketName,
-		Region:         *region,
-	}
-}
-
-// isValidBucketName validates the S3 bucket name (simple version).
-func isValidBucketName(bucket string) bool {
-	// This regex is a basic check—adjust as necessary.
-	re := regexp.MustCompile(`^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$`)
-	return re.MatchString(bucket)
-}
-
 func main() {
-	// Load configuration from flags.
-	cfgApp := newConfig()
-
-	// Create a cancellable context that listens for OS interrupts, with a timeout.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer cancel()
 
-	// Load AWS SDK configuration.
+	if err := run(ctx, os.Args[1:]); err != nil {
+		log.Fatalf("Could not transcribe audio: %v", err)
+	}
+}
+
+func run(ctx context.Context, args []string) error {
+	cfgApp, err := newConfig(args)
+	if err != nil {
+		return err
+	}
+
 	awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(cfgApp.Region))
 	if err != nil {
-		log.Fatalf("Unable to load AWS SDK config: %v", err)
+		return fmt.Errorf("load AWS SDK config: %w", err)
 	}
 
-	// Ensure the input file exists.
-	fileInfo, err := os.Stat(cfgApp.InputFilePath)
-	if err != nil {
-		log.Fatalf("Error stating input file: %v", err)
-	}
-	if fileInfo.IsDir() {
-		log.Fatalf("Input path is a directory, not a file")
-	}
-
-	// Open the file and compute its hash.
 	f, err := os.Open(cfgApp.InputFilePath)
 	if err != nil {
-		log.Fatalf("Failed to open input file: %v", err)
+		return fmt.Errorf("open input file: %w", err)
 	}
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, f); err != nil {
-		log.Fatalf("Failed to compute file hash: %v", err)
+		return fmt.Errorf("compute file hash: %w", err)
 	}
 	f.Close()
 
@@ -127,90 +83,88 @@ func main() {
 	log.Printf("Using S3 key: %s", s3Key)
 	log.Printf("Using transcription job name: %s", jobName)
 
-	// Create an S3 client.
 	s3Client := s3.NewFromConfig(awsCfg)
-
-	// Check if the file is already in S3.
 	exists, err := checkS3ObjectExists(ctx, s3Client, cfgApp.BucketName, s3Key)
 	if err != nil {
-		log.Fatalf("Failed to check S3 object existence: %v", err)
+		return fmt.Errorf("check S3 object existence: %w", err)
 	}
 	if exists {
 		log.Printf("File already exists in S3; skipping upload.")
 	} else {
 		log.Printf("Uploading file to S3...")
 		if err := uploadFileToS3(ctx, s3Client, cfgApp.BucketName, s3Key, cfgApp.InputFilePath); err != nil {
-			log.Fatalf("Failed to upload file to S3: %v", err)
+			return fmt.Errorf("upload file to S3: %w", err)
 		}
 		log.Printf("Upload completed.")
 	}
 
-	// Create a Transcribe client.
 	transcribeClient := transcribe.NewFromConfig(awsCfg)
-
-	// Ensure that a transcription job is running (or already exists).
 	if err := ensureTranscriptionJob(ctx, transcribeClient, jobName, cfgApp.BucketName, s3Key); err != nil {
-		log.Fatalf("Error ensuring transcription job: %v", err)
+		return fmt.Errorf("ensuring transcription job: %w", err)
 	}
+	log.Printf("Transcription job completed.")
 
-	// The transcription result is stored in S3.
 	// By default, Transcribe names the output file "<jobName>.json" in the provided bucket.
 	transcriptionKey := fmt.Sprintf("%s.json", jobName)
 	log.Printf("Retrieving transcription result from S3: %s", transcriptionKey)
 	transcript, err := getTranscriptFromS3(ctx, s3Client, cfgApp.BucketName, transcriptionKey)
 	if err != nil {
-		log.Fatalf("Failed to retrieve transcription result: %v", err)
+		return fmt.Errorf("retrieve transcription result: %w", err)
 	}
 
-	// Write the transcript to the local output file.
 	if err := os.WriteFile(cfgApp.OutputFilePath, []byte(transcript), 0o644); err != nil {
-		log.Fatalf("Failed to write transcript to file: %v", err)
+		return fmt.Errorf("write transcript to file: %w", err)
 	}
 	log.Printf("Transcript saved to %q", cfgApp.OutputFilePath)
+	return nil
 }
 
-// ensureTranscriptionJob checks for an existing transcription job and starts one if not found.
-func ensureTranscriptionJob(ctx context.Context, client *transcribe.Client, jobName, bucket, mediaKey string) error {
-	jobExists, jobStatus, err := getTranscriptionJobStatus(ctx, client, jobName)
+// newConfig parses flags and performs initial validation.
+func newConfig(args []string) (*AppConfig, error) {
+	fs := flag.NewFlagSet("", flag.ExitOnError)
+
+	inputFilePath := fs.String("f", "", "Path to input m4a audio file")
+	outputFilePath := fs.String("o", "", "Path to output text file")
+	bucketName := fs.String("b", "", "S3 bucket name")
+	region := fs.String("r", "us-east-1", "AWS region (default: us-east-1)")
+
+	if err := fs.Parse(args); err != nil {
+		return nil, fmt.Errorf("parsing flags: %w", err)
+	}
+
+	// fail fast
+	if *inputFilePath == "" || *outputFilePath == "" || *bucketName == "" {
+		fs.Usage()
+		os.Exit(1)
+	}
+
+	if !strings.HasSuffix(strings.ToLower(*inputFilePath), ".m4a") {
+		return nil, fmt.Errorf("input file must be an m4a file")
+	}
+
+	isValid, err := validateBucketName(*bucketName)
 	if err != nil {
-		return fmt.Errorf("error checking transcription job status: %w", err)
-	}
-	if jobExists {
-		log.Printf("Transcription job %q already exists with status: %s", jobName, jobStatus)
-		return nil
+		return nil, fmt.Errorf("invalid bucket name %q: %w", *bucketName, err)
 	}
 
-	log.Printf("Starting transcription job...")
-	if err := startTranscriptionJob(ctx, client, jobName, bucket, mediaKey); err != nil {
-		return fmt.Errorf("failed to start transcription job: %w", err)
+	if !isValid {
+		return nil, fmt.Errorf("invalid bucket name %q", *bucketName)
 	}
-	log.Printf("Transcription job started.")
 
-	// Poll for transcription job completion.
-	log.Printf("Waiting for transcription job to complete...")
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
+	return &AppConfig{
+		InputFilePath:  *inputFilePath,
+		OutputFilePath: *outputFilePath,
+		BucketName:     *bucketName,
+		Region:         *region,
+	}, nil
+}
 
-PollLoop:
-	for {
-		select {
-		case <-ctx.Done():
-			log.Fatalf("Interrupted or timed out, exiting.")
-		case <-ticker.C:
-			_, jobStatus, err := getTranscriptionJobStatus(ctx, client, jobName)
-			if err != nil {
-				log.Fatalf("Error getting transcription job status: %v", err)
-			}
-			log.Printf("Job status: %s", jobStatus)
-			if jobStatus == string(types.TranscriptionJobStatusCompleted) {
-				break PollLoop
-			} else if jobStatus == string(types.TranscriptionJobStatusFailed) {
-				log.Fatalf("Transcription job failed.")
-			}
-		}
+func validateBucketName(bucket string) (bool, error) {
+	re, err := regexp.Compile(`^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$`)
+	if err != nil {
+		return false, fmt.Errorf("compile regex: %w", err)
 	}
-	log.Printf("Transcription job completed.")
-	return nil
+	return re.MatchString(bucket), nil
 }
 
 // checkS3ObjectExists uses HeadObject to determine if the object already exists.
@@ -242,6 +196,49 @@ func uploadFileToS3(ctx context.Context, client *s3.Client, bucket, key, filePat
 		Body:   f,
 	})
 	return err
+}
+
+// ensureTranscriptionJob checks for an existing transcription job and starts one if not found.
+func ensureTranscriptionJob(ctx context.Context, client *transcribe.Client, jobName, bucket, mediaKey string) error {
+	jobExists, jobStatus, err := getTranscriptionJobStatus(ctx, client, jobName)
+	if err != nil {
+		return fmt.Errorf("checking transcription job status: %w", err)
+	}
+	if jobExists {
+		log.Printf("Transcription job %q already exists with status: %s", jobName, jobStatus)
+		return nil
+	}
+
+	log.Printf("Starting transcription job...")
+	if err := startTranscriptionJob(ctx, client, jobName, bucket, mediaKey); err != nil {
+		return fmt.Errorf("start transcription job: %w", err)
+	}
+	log.Printf("Transcription job started.")
+
+	// Poll for transcription job completion.
+	log.Printf("Waiting for transcription job to complete...")
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+PollLoop:
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			_, jobStatus, err := getTranscriptionJobStatus(ctx, client, jobName)
+			if err != nil {
+				return fmt.Errorf("retrieving transcription job status: %w", err)
+			}
+			log.Printf("Job status: %s", jobStatus)
+			if jobStatus == string(types.TranscriptionJobStatusCompleted) {
+				break PollLoop
+			} else if jobStatus == string(types.TranscriptionJobStatusFailed) {
+				return fmt.Errorf("transcription job failed")
+			}
+		}
+	}
+	return nil
 }
 
 // getTranscriptionJobStatus checks whether the transcription job exists and returns its status.
@@ -276,6 +273,7 @@ func startTranscriptionJob(ctx context.Context, client *transcribe.Client, jobNa
 
 // isNotFoundError determines if an error from AWS indicates a “not found” condition.
 func isNotFoundError(err error) bool {
+	// TODO: use the various S3 and Transcribe error types
 	var apiErr smithy.APIError
 	if err == nil {
 		return false
