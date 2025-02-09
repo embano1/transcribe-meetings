@@ -3,14 +3,16 @@
 [![Go Version](https://img.shields.io/badge/go-1.23%2B-blue)](https://golang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Transcribe Meetings is a Go command-line application that transcribes meeting recordings using AWS S3 and AWS Transcribe. It uploads your audio file (in m4a format) to S3, triggers an AWS Transcribe job (if one isn’t already running), and retrieves the transcription result—saving it locally.
+Transcribe Meetings is a Go command-line application that transcribes meeting recordings using Amazon S3 and Amazon
+Transcribe. It uploads your audio file (in m4a format) to S3, triggers an Amazon Transcribe job (if one isn’t already
+running), and retrieves the transcription result—saving it locally.
 
 ## Features
 
 - **Idempotent Uploads:**  
   Computes a file hash to generate a unique S3 key and transcription job name, ensuring that the same file isn’t uploaded or re-transcribed more than once.
 
-- **AWS Transcribe Integration:**  
+- **Amazon Transcribe Integration:**  
   Automatically starts (or reuses) a transcription job and polls for job completion.
 
 - **Result Retrieval:**  
@@ -23,7 +25,7 @@ Transcribe Meetings is a Go command-line application that transcribes meeting re
 
 **AWS Resources:**  
   - An S3 bucket where the meeting files and transcription results will be stored.  
-  - AWS Transcribe must be enabled in your AWS account.
+  - Amazon Transcribe must be enabled in your AWS account.
 
 ## Installation
 
@@ -76,7 +78,7 @@ Example:
    If the file isn’t already in your specified S3 bucket, the app uploads it.
 
 3. **Transcription Job:**  
-   It checks if a transcription job for that file already exists; if not, it starts a new job using AWS Transcribe and polls until the job is complete.
+   It checks if a transcription job for that file already exists; if not, it starts a new job using Amazon Transcribe and polls until the job is complete.
 
 4. **Result Retrieval:**  
    The transcript (stored as a JSON file in S3) is downloaded, parsed, and saved to your local output file.
