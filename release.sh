@@ -34,16 +34,12 @@ if [ -z "${RELEASE}" ]; then
     exit 1
 fi
 
-# git tag -a -s -m "Release ${RELEASE}" ${RELEASE}
-if ! git rev-parse "$RELEASE" >/dev/null 2>&1; then
-    echo "Error: Git tag $RELEASE does not exist"
-    exit 1
-fi
-
 if [ -z "${RELEASE}" ]; then
     echo "Error: RELEASE environment variable is not set"
     exit 1
 fi
+
+git tag -a -s -m "Release ${RELEASE}" ${RELEASE}
 
 # export GIT_COMMIT=$(git rev-parse --short HEAD)
 if [ -z "${GIT_COMMIT}" ]; then
@@ -63,6 +59,9 @@ echo "COMMIT: ${GIT_COMMIT}"
 echo "Docker Repo: ${KO_DOCKER_REPO}"
 echo "Waiting 10s before continuing..."
 sleep 10
+
+# note: goreleaser expects the commit and tag to be pushed
+git push upstream main --tags
 
 # build artifacts and publish release
 op run -- goreleaser release --clean
