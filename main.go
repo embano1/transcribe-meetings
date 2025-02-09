@@ -43,6 +43,12 @@ type AppConfig struct {
 	Region         string
 }
 
+// build info set by goreleaser
+var (
+	version = "unknown"
+	commit  = "unknown"
+)
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -127,9 +133,14 @@ func newConfig(args []string) (*AppConfig, error) {
 	outputFilePath := fs.String("o", "", "Path to output text file")
 	bucketName := fs.String("b", "", "S3 bucket name")
 	region := fs.String("r", "us-east-1", "AWS region (default: us-east-1)")
+	version := fs.Bool("v", false, "Print version and exit")
 
 	if err := fs.Parse(args); err != nil {
 		return nil, fmt.Errorf("parsing flags: %w", err)
+	}
+
+	if *version {
+		printVersion()
 	}
 
 	// fail fast
@@ -157,6 +168,12 @@ func newConfig(args []string) (*AppConfig, error) {
 		BucketName:     *bucketName,
 		Region:         *region,
 	}, nil
+}
+
+func printVersion() {
+	fmt.Printf("Version: %s\n", version)
+	fmt.Printf("Commit: %s\n", commit)
+	os.Exit(0)
 }
 
 func validateBucketName(bucket string) (bool, error) {
