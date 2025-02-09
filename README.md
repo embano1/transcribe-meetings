@@ -1,7 +1,10 @@
 # Transcribe Meetings
 
-[![Go Version](https://img.shields.io/badge/go-1.23%2B-blue)](https://golang.org/) [![License:
-MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Latest
+Release](https://img.shields.io/github/release/embano1/transcribe-meetings.svg?logo=github&style=flat-square)](https://github.com/embano1/transcribe-meetings/releases/latest)
+[![go.mod Go
+version](https://img.shields.io/github/go-mod/go-version/embano1/transcribe-meetings)](https://github.com/embano1/transcribe-meetings)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Transcribe Meetings is a Go command-line application that transcribes meeting recordings using Amazon S3 and Amazon
 Transcribe. It uploads your audio file (in m4a format) to S3, triggers an Amazon Transcribe job (if one isn’t already
