@@ -16,17 +16,10 @@ Transcribe Meetings is a Go command-line application that transcribes meeting re
 - **Result Retrieval:**  
   Once the job completes, retrieves the transcript JSON from S3 and extracts the transcript text to a local file.
 
-- **Graceful Interruption Handling:**  
-  Uses a cancellable context that listens for OS interrupts (e.g. Ctrl+C) and respects a configurable timeout.
-
-
 ## Prerequisites
 
-**Go:**  
-Version Tested with Go 1.23
-
 **AWS Credentials:**  
-Ensure that your AWS credentials are configured. You can use environment variables, an AWS credentials file, or another supported authentication method.
+**Ensure** that your AWS credentials are configured. You can use environment variables, an AWS credentials file, or another supported authentication method.
 
 **AWS Resources:**  
   - An S3 bucket where the meeting files and transcription results will be stored.  
@@ -34,7 +27,18 @@ Ensure that your AWS credentials are configured. You can use environment variabl
 
 ## Installation
 
-Clone the repository and build the application:
+### Releases
+
+Grab the latest [release](https://github.com/embano1/transcribe-meetings/releases) or use the GHCR container
+[image](https://github.com/users/embano1/packages/container/package/transcribe-meetings):
+
+```bash
+docker pull ghcr.io/embano1/transcribe-meetings
+```
+
+### Build From Source
+
+Requires Go toolchain, tested with Go `1.23`.
 
 ```bash
 git clone https://github.com/embano1/transcribe-meetings.git
@@ -44,18 +48,24 @@ go build -o transcribe-meetings main.go
 
 ## Usage
 
-Once built, you can run the application with the following flags:
+> [!NOTE] 
+> Before running the application, make sure you have configured your AWS credentials accordingly to use Amazon S3 and Transcribe.
 
-- `-f` – Path to the input m4a audio file  
+Once installed, you can run the application with the following flags:
+
+- `-f` – Path to the input `.m4a` audio file  
 - `-o` – Path for the output text file containing the transcript  
-- `-b` – S3 bucket name  
+- `-b` – S3 bucket name (must exist)
 - `-r` – (Optional) AWS region (defaults to `us-east-1`)
 
 Example:
 
 ```bash
-./transcribe-meetings -f meeting.m4a -o transcript.txt -b your-s3-bucket -r us-east-1
+./transcribe-meetings -f meeting.m4a -o transcript.txt -b your-existing-s3-bucket -r eu-central-1
 ```
+
+> [!NOTE] 
+> When using the container image, you need to make sure your container has access to the file system where your audio file is located and the appropriate AWS credentials.
 
 ### How It Works
 
