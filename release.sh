@@ -19,6 +19,18 @@ if [ -z "${GITHUB_TOKEN}" ]; then
     exit 1
 fi
 
+# check if GITHUB_TOKEN starts with op://
+if ! [[ $GITHUB_TOKEN == op://* ]]; then
+    echo "Error: GITHUB_TOKEN environment variable must point to valid 1Password secrets reference"
+    exit 1
+fi
+
+# uses 1Password to inject passwords
+if ! command -v op &>/dev/null; then
+    echo "Error: 1Password CLI (op) is not installed"
+    exit 1
+fi
+
 if ! command -v goreleaser &>/dev/null; then
     echo "Error: goreleaser is not installed"
     exit 1
@@ -41,7 +53,7 @@ fi
 
 git tag -a -s -m "Release ${RELEASE}" ${RELEASE}
 
-# export GIT_COMMIT=$(git rev-parse --short HEAD)
+# export GIT_COMMIT=$(git rev-parse HEAD)
 if [ -z "${GIT_COMMIT}" ]; then
     echo "Error: GIT_COMMIT environment variable is not set"
     exit 1
