@@ -172,7 +172,7 @@ func newConfig(args []string) (*AppConfig, error) {
 
 func printVersion() {
 	fmt.Printf("Version: %s\n", version)
-	fmt.Printf("Commit: %s\n", commit[:6])
+	fmt.Printf("Commit: %s\n", commit[:7])
 	os.Exit(0)
 }
 
