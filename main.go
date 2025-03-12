@@ -41,6 +41,7 @@ type AppConfig struct {
 	OutputFilePath string
 	BucketName     string
 	Region         string
+	LanguageCode   string
 }
 
 // build info set by goreleaser
@@ -105,7 +106,7 @@ func run(ctx context.Context, args []string) error {
 	}
 
 	transcribeClient := transcribe.NewFromConfig(awsCfg)
-	if err := ensureTranscriptionJob(ctx, transcribeClient, jobName, cfgApp.BucketName, s3Key); err != nil {
+	if err := ensureTranscriptionJob(ctx, transcribeClient, jobName, cfgApp.BucketName, s3Key, cfgApp.LanguageCode); err != nil {
 		return fmt.Errorf("ensuring transcription job: %w", err)
 	}
 	log.Printf("Transcription job completed.")
@@ -132,7 +133,8 @@ func newConfig(args []string) (*AppConfig, error) {
 	inputFilePath := fs.String("f", "", "Path to input m4a audio file")
 	outputFilePath := fs.String("o", "", "Path to output text file")
 	bucketName := fs.String("b", "", "S3 bucket name")
-	region := fs.String("r", "us-east-1", "AWS region (default: us-east-1)")
+	region := fs.String("r", "us-east-1", "AWS region")
+	languageCode := fs.String("l", "en-US", "Language code for transcription")
 	version := fs.Bool("v", false, "Print version and exit")
 
 	if err := fs.Parse(args); err != nil {
@@ -167,6 +169,7 @@ func newConfig(args []string) (*AppConfig, error) {
 		OutputFilePath: *outputFilePath,
 		BucketName:     *bucketName,
 		Region:         *region,
+		LanguageCode:   *languageCode,
 	}, nil
 }
 
@@ -216,7 +219,7 @@ func uploadFileToS3(ctx context.Context, client *s3.Client, bucket, key, filePat
 }
 
 // ensureTranscriptionJob checks for an existing transcription job and starts one if not found.
-func ensureTranscriptionJob(ctx context.Context, client *transcribe.Client, jobName, bucket, mediaKey string) error {
+func ensureTranscriptionJob(ctx context.Context, client *transcribe.Client, jobName, bucket, mediaKey, languageCode string) error {
 	jobExists, jobStatus, err := getTranscriptionJobStatus(ctx, client, jobName)
 	if err != nil {
 		return fmt.Errorf("checking transcription job status: %w", err)
@@ -227,7 +230,7 @@ func ensureTranscriptionJob(ctx context.Context, client *transcribe.Client, jobN
 	}
 
 	log.Printf("Starting transcription job...")
-	if err := startTranscriptionJob(ctx, client, jobName, bucket, mediaKey); err != nil {
+	if err := startTranscriptionJob(ctx, client, jobName, bucket, mediaKey, languageCode); err != nil {
 		return fmt.Errorf("start transcription job: %w", err)
 	}
 	log.Printf("Transcription job started.")
@@ -273,11 +276,11 @@ func getTranscriptionJobStatus(ctx context.Context, client *transcribe.Client, j
 }
 
 // startTranscriptionJob starts a transcription job using the provided S3 file.
-func startTranscriptionJob(ctx context.Context, client *transcribe.Client, jobName, bucket, mediaKey string) error {
+func startTranscriptionJob(ctx context.Context, client *transcribe.Client, jobName, bucket, mediaKey, languageCode string) error {
 	mediaURI := fmt.Sprintf("s3://%s/%s", bucket, mediaKey)
 	input := &transcribe.StartTranscriptionJobInput{
 		TranscriptionJobName: &jobName,
-		LanguageCode:         types.LanguageCodeEnUs, // adjust if needed
+		LanguageCode:         types.LanguageCode(languageCode),
 		MediaFormat:          "m4a",
 		Media: &types.Media{
 			MediaFileUri: &mediaURI,

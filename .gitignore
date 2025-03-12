@@ -2,3 +2,4 @@ result/
 transcribe-meetings
 dist/
 input/
+.DS_Store
