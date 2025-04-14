@@ -70,6 +70,15 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("load AWS SDK config: %w", err)
 	}
 
+	// fail fast if the client is not authorized
+	s3Client := s3.NewFromConfig(awsCfg)
+	_, err = s3Client.HeadBucket(ctx, &s3.HeadBucketInput{
+		Bucket: &cfgApp.BucketName,
+	})
+	if err != nil {
+		return fmt.Errorf("verify bucket %q exists: %w", cfgApp.BucketName, err)
+	}
+
 	f, err := os.Open(cfgApp.InputFilePath)
 	if err != nil {
 		return fmt.Errorf("open input file: %w", err)
@@ -90,7 +99,6 @@ func run(ctx context.Context, args []string) error {
 	log.Printf("Using S3 key: %s", s3Key)
 	log.Printf("Using transcription job name: %s", jobName)
 
-	s3Client := s3.NewFromConfig(awsCfg)
 	exists, err := checkS3ObjectExists(ctx, s3Client, cfgApp.BucketName, s3Key)
 	if err != nil {
 		return fmt.Errorf("check S3 object existence: %w", err)
