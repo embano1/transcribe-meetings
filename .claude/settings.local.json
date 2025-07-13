@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue view:*)",
+      "Bash(go build:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(mkdir:*)",
+      "Bash(go mod:*)",
+      "Bash(./transcribe-meetings-test:*)"
+    ],
+    "deny": []
+  }
+}
