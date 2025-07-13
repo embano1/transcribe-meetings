@@ -97,8 +97,8 @@ func (t *TranscribeService) startTranscriptionJob(ctx context.Context, jobName, 
 	if cfg.SpeakerDiarization {
 		maxSpeakers := int32(cfg.MaxSpeakers)
 		input.Settings = &types.Settings{
-			ShowSpeakerLabels:  &cfg.SpeakerDiarization,
-			MaxSpeakerLabels:   &maxSpeakers,
+			ShowSpeakerLabels: &cfg.SpeakerDiarization,
+			MaxSpeakerLabels:  &maxSpeakers,
 		}
 	}
 	_, err := t.client.StartTranscriptionJob(ctx, input)

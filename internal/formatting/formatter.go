@@ -32,7 +32,7 @@ func FormatTranscriptWithSpeakers(result *types.TranscriptionResult) string {
 				speakerNum := strings.TrimPrefix(currentSpeaker, "spk_")
 				formatted.WriteString(fmt.Sprintf("Speaker %s: ", speakerNum))
 			}
-			
+
 			// Add the word with a space (unless it's the first word for this speaker)
 			if len(item.Alternatives) > 0 {
 				word := item.Alternatives[0].Content

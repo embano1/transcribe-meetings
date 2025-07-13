@@ -14,7 +14,7 @@ type TranscriptionResult struct {
 
 // SpeakerLabels contains speaker diarization information
 type SpeakerLabels struct {
-	Speakers []int `json:"speakers"`
+	Speakers int `json:"speakers"`
 	Segments []struct {
 		StartTime    string `json:"start_time"`
 		EndTime      string `json:"end_time"`
@@ -28,11 +28,11 @@ type SpeakerLabels struct {
 
 // Item represents individual words/items in the transcription
 type Item struct {
-	StartTime    string                 `json:"start_time,omitempty"`
-	EndTime      string                 `json:"end_time,omitempty"`
-	Type         string                 `json:"type"`
-	Alternatives []Alternative          `json:"alternatives"`
-	SpeakerLabel string                 `json:"speaker_label,omitempty"`
+	StartTime    string        `json:"start_time,omitempty"`
+	EndTime      string        `json:"end_time,omitempty"`
+	Type         string        `json:"type"`
+	Alternatives []Alternative `json:"alternatives"`
+	SpeakerLabel string        `json:"speaker_label,omitempty"`
 }
 
 // Alternative represents word alternatives
