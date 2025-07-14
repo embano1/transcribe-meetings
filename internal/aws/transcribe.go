@@ -30,15 +30,28 @@ func (t *TranscribeService) EnsureTranscriptionJob(ctx context.Context, jobName,
 		return fmt.Errorf("checking transcription job status: %w", err)
 	}
 	if jobExists {
-		log.Printf("Transcription job %q already exists with status: %s", jobName, jobStatus)
-		return nil
+		if cfg.Force {
+			log.Printf("Transcription job %q already exists with status: %s, but force flag is enabled. Deleting existing job...", jobName, jobStatus)
+			if err := t.deleteTranscriptionJob(ctx, jobName); err != nil {
+				return fmt.Errorf("delete existing transcription job: %w", err)
+			}
+			log.Printf("Existing transcription job deleted.")
+			jobExists = false
+		} else {
+			log.Printf("Transcription job %q already exists with status: %s", jobName, jobStatus)
+			if jobStatus == string(types.TranscriptionJobStatusCompleted) {
+				return nil
+			}
+		}
 	}
 
-	log.Printf("Starting transcription job...")
-	if err := t.startTranscriptionJob(ctx, jobName, bucket, mediaKey, cfg); err != nil {
-		return fmt.Errorf("start transcription job: %w", err)
+	if !jobExists {
+		log.Printf("Starting transcription job...")
+		if err := t.startTranscriptionJob(ctx, jobName, bucket, mediaKey, cfg); err != nil {
+			return fmt.Errorf("start transcription job: %w", err)
+		}
+		log.Printf("Transcription job started.")
 	}
-	log.Printf("Transcription job started.")
 
 	// Poll for transcription job completion.
 	log.Printf("Waiting for transcription job to complete...")
@@ -78,6 +91,14 @@ func (t *TranscribeService) getTranscriptionJobStatus(ctx context.Context, jobNa
 		return false, "", err
 	}
 	return true, string(out.TranscriptionJob.TranscriptionJobStatus), nil
+}
+
+// deleteTranscriptionJob deletes an existing transcription job.
+func (t *TranscribeService) deleteTranscriptionJob(ctx context.Context, jobName string) error {
+	_, err := t.client.DeleteTranscriptionJob(ctx, &transcribe.DeleteTranscriptionJobInput{
+		TranscriptionJobName: &jobName,
+	})
+	return err
 }
 
 // startTranscriptionJob starts a transcription job using the provided S3 file.

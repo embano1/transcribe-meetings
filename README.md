@@ -70,6 +70,7 @@ Once installed, you can run the application with the following flags:
 - `-l` – (Optional) Language code for transcription (defaults to `en-US`)
 - `-d` – (Optional) Enable speaker diarization (defaults to `false`)
 - `-m` – (Optional) Maximum number of speakers for diarization (defaults to `10`)
+- `-force` – (Optional) Force re-transcription even if job already exists (defaults to `false`)
 - `-v` - Print version information
 
 Example (basic transcription):
@@ -82,6 +83,13 @@ Example (with speaker diarization):
 
 ```bash
 ./transcribe-meetings -f meeting.m4a -o transcript.txt -b your-existing-s3-bucket -d -m 5
+```
+
+Example (force re-transcription with diarization):
+
+```bash
+# Useful when you want to re-transcribe with different settings (e.g., enabling diarization)
+./transcribe-meetings -f meeting.m4a -o transcript.txt -b your-existing-s3-bucket -d -force
 ```
 
 Example Docker:

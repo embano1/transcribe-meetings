@@ -50,4 +50,5 @@ type AppConfig struct {
 	LanguageCode       string
 	SpeakerDiarization bool
 	MaxSpeakers        int
+	Force              bool
 }

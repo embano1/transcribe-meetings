@@ -27,6 +27,7 @@ func New(args []string) (*types.AppConfig, error) {
 	languageCode := fs.String("l", "en-US", "Language code for transcription")
 	speakerDiarization := fs.Bool("d", false, "Enable speaker diarization")
 	maxSpeakers := fs.Int("m", 10, "Maximum number of speakers for diarization")
+	force := fs.Bool("force", false, "Force re-transcription even if job already exists")
 	version := fs.Bool("v", false, "Print version and exit")
 
 	if err := fs.Parse(args); err != nil {
@@ -64,6 +65,7 @@ func New(args []string) (*types.AppConfig, error) {
 		LanguageCode:       *languageCode,
 		SpeakerDiarization: *speakerDiarization,
 		MaxSpeakers:        *maxSpeakers,
+		Force:              *force,
 	}, nil
 }
 
