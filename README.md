@@ -13,11 +13,14 @@ running), and retrieves the transcription result—saving it locally.
 ## Features
 
 - **Idempotent Uploads:**  
-  Computes a file hash to generate a unique S3 key and transcription job name, ensuring that the same file isn’t
+  Computes a file hash to generate a unique S3 key and transcription job name, ensuring that the same file isn't
   uploaded or re-transcribed more than once.
 
 - **Amazon Transcribe Integration:**  
   Automatically starts (or reuses) a transcription job and polls for job completion.
+
+- **Speaker Diarization:**  
+  Optionally identifies different speakers in the audio and formats the transcript with speaker labels for easier reading.
 
 - **Result Retrieval:**  
   Once the job completes, retrieves the transcript JSON from S3 and extracts the transcript text to a local file.
@@ -64,12 +67,29 @@ Once installed, you can run the application with the following flags:
 - `-o` – Path for the output text file containing the transcript  
 - `-b` – S3 bucket name (must exist)
 - `-r` – (Optional) AWS region (defaults to `us-east-1`)
+- `-l` – (Optional) Language code for transcription (defaults to `en-US`)
+- `-d` – (Optional) Enable speaker diarization (defaults to `false`)
+- `-m` – (Optional) Maximum number of speakers for diarization (defaults to `10`)
+- `-force` – (Optional) Force re-transcription even if job already exists (defaults to `false`)
 - `-v` - Print version information
 
-Example:
+Example (basic transcription):
 
 ```bash
 ./transcribe-meetings -f meeting.m4a -o transcript.txt -b your-existing-s3-bucket -r eu-central-1
+```
+
+Example (with speaker diarization):
+
+```bash
+./transcribe-meetings -f meeting.m4a -o transcript.txt -b your-existing-s3-bucket -d -m 5
+```
+
+Example (force re-transcription with diarization):
+
+```bash
+# Useful when you want to re-transcribe with different settings (e.g., enabling diarization)
+./transcribe-meetings -f meeting.m4a -o transcript.txt -b your-existing-s3-bucket -d -force
 ```
 
 Example Docker:
@@ -81,6 +101,22 @@ ghcr.io/embano1/transcribe-meetings  -b <bucket name> -f /app/<location of m4a f
 
 > [!NOTE] 
 > Make sure the container has access to the local filesystem (mount) and replace the file and folder names based on your environment
+
+### Output Formats
+
+**Basic Transcription (without `-d` flag):**
+```
+The transcript appears as a continuous text without speaker identification...
+```
+
+**Speaker Diarization (with `-d` flag):**
+```
+Speaker 0: Hello everyone, welcome to today's meeting.
+
+Speaker 1: Thank you for having me. I'm excited to discuss the project updates.
+
+Speaker 0: Great! Let's start with the quarterly review...
+```
 
 ### How It Works
 
