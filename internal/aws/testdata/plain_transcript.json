@@ -1,0 +1,39 @@
+{
+  "results": {
+    "transcripts": [
+      {
+        "transcript": "Hello world."
+      }
+    ],
+    "items": [
+      {
+        "type": "pronunciation",
+        "alternatives": [
+          {
+            "confidence": "1.0",
+            "content": "Hello"
+          }
+        ]
+      },
+      {
+        "type": "pronunciation",
+        "alternatives": [
+          {
+            "confidence": "1.0",
+            "content": "world"
+          }
+        ]
+      },
+      {
+        "type": "punctuation",
+        "alternatives": [
+          {
+            "confidence": "1.0",
+            "content": "."
+          }
+        ]
+      }
+    ]
+  },
+  "status": "COMPLETED"
+}

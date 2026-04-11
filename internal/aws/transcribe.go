@@ -13,14 +13,35 @@ import (
 	appTypes "github.com/embano1/transcribe-meetings/internal/types"
 )
 
+const defaultPollInterval = 10 * time.Second
+
+type transcribeAPI interface {
+	GetTranscriptionJob(ctx context.Context, params *transcribe.GetTranscriptionJobInput, optFns ...func(*transcribe.Options)) (*transcribe.GetTranscriptionJobOutput, error)
+	DeleteTranscriptionJob(ctx context.Context, params *transcribe.DeleteTranscriptionJobInput, optFns ...func(*transcribe.Options)) (*transcribe.DeleteTranscriptionJobOutput, error)
+	StartTranscriptionJob(ctx context.Context, params *transcribe.StartTranscriptionJobInput, optFns ...func(*transcribe.Options)) (*transcribe.StartTranscriptionJobOutput, error)
+}
+
 // TranscribeService handles Transcribe operations
 type TranscribeService struct {
-	client *transcribe.Client
+	client       transcribeAPI
+	pollInterval time.Duration
 }
 
 // NewTranscribeService creates a new Transcribe service
-func NewTranscribeService(client *transcribe.Client) *TranscribeService {
-	return &TranscribeService{client: client}
+func NewTranscribeService(client transcribeAPI) *TranscribeService {
+	return NewTranscribeServiceWithPollInterval(client, defaultPollInterval)
+}
+
+// NewTranscribeServiceWithPollInterval creates a transcribe service with a custom polling interval.
+func NewTranscribeServiceWithPollInterval(client transcribeAPI, pollInterval time.Duration) *TranscribeService {
+	if pollInterval <= 0 {
+		pollInterval = defaultPollInterval
+	}
+
+	return &TranscribeService{
+		client:       client,
+		pollInterval: pollInterval,
+	}
 }
 
 // EnsureTranscriptionJob checks for an existing transcription job and starts one if not found.
@@ -55,7 +76,7 @@ func (t *TranscribeService) EnsureTranscriptionJob(ctx context.Context, jobName,
 
 	// Poll for transcription job completion.
 	log.Printf("Waiting for transcription job to complete...")
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(t.pollInterval)
 	defer ticker.Stop()
 
 PollLoop:
