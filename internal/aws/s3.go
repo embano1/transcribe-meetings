@@ -15,13 +15,20 @@ import (
 	"github.com/embano1/transcribe-meetings/internal/types"
 )
 
+type s3API interface {
+	HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
+	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+	HeadBucket(ctx context.Context, params *s3.HeadBucketInput, optFns ...func(*s3.Options)) (*s3.HeadBucketOutput, error)
+}
+
 // S3Service handles S3 operations
 type S3Service struct {
-	client *s3.Client
+	client s3API
 }
 
 // NewS3Service creates a new S3 service
-func NewS3Service(client *s3.Client) *S3Service {
+func NewS3Service(client s3API) *S3Service {
 	return &S3Service{client: client}
 }
 

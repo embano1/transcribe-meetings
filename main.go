@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -25,15 +26,26 @@ func main() {
 	defer stop()
 
 	if err := run(ctx, os.Args[1:]); err != nil {
+		var usageErr *appConfig.UsageError
+		if errors.As(err, &usageErr) {
+			fmt.Fprintf(os.Stderr, "%v\n", usageErr.Err)
+			fmt.Fprint(os.Stderr, usageErr.Usage)
+			os.Exit(usageErr.ExitCode)
+		}
 		log.Fatalf("Could not transcribe audio: %v", err)
 	}
 }
 
 func run(ctx context.Context, args []string) error {
-	cfgApp, err := appConfig.New(args)
+	parseResult, err := appConfig.New(args)
 	if err != nil {
 		return err
 	}
+	if parseResult.ShowVersion {
+		fmt.Print(appConfig.VersionInfo())
+		return nil
+	}
+	cfgApp := parseResult.Config
 
 	awsCfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(cfgApp.Region))
 	if err != nil {
