@@ -37,7 +37,7 @@ func FormatTranscriptWithSpeakers(result *types.TranscriptionResult) string {
 			if len(item.Alternatives) > 0 {
 				word := item.Alternatives[0].Content
 				// Only add space if we're not at the beginning of speaker's section
-				if !strings.HasSuffix(formatted.String(), ": ") {
+				if formatted.Len() > 0 && !strings.HasSuffix(formatted.String(), ": ") {
 					formatted.WriteString(" ")
 				}
 				formatted.WriteString(word)

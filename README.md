@@ -2,6 +2,7 @@
 
 [![Latest
 Release](https://img.shields.io/github/release/embano1/transcribe-meetings.svg?logo=github&style=flat-square)](https://github.com/embano1/transcribe-meetings/releases/latest)
+[![CI](https://github.com/embano1/transcribe-meetings/actions/workflows/ci.yml/badge.svg)](https://github.com/embano1/transcribe-meetings/actions/workflows/ci.yml)
 [![go.mod Go
 version](https://img.shields.io/github/go-mod/go-version/embano1/transcribe-meetings)](https://github.com/embano1/transcribe-meetings)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -48,7 +49,7 @@ docker pull ghcr.io/embano1/transcribe-meetings
 
 ### Build From Source
 
-Requires Go toolchain, tested with Go `1.23`.
+Requires the Go toolchain version declared in `go.mod`.
 
 ```bash
 git clone https://github.com/embano1/transcribe-meetings.git
